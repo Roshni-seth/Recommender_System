@@ -1,48 +1,47 @@
 import streamlit as st
-import pickle
-import pandas as pd
-import requests
 import os
+import requests
+import pickle
 
-# Function to download file from Google Drive
 def download_file_from_google_drive(file_id, destination):
     URL = "https://drive.google.com/uc?export=download"
-
     session = requests.Session()
+
     response = session.get(URL, params={'id': file_id}, stream=True)
+    token = None
+    for key, value in response.cookies.items():
+        if key.startswith('download_warning'):
+            token = value
 
-    # Handle large files with confirmation token
-    def get_confirm_token(response):
-        for key, value in response.cookies.items():
-            if key.startswith('download_warning'):
-                return value
-        return None
-
-    token = get_confirm_token(response)
     if token:
-        params = {'id': file_id, 'confirm': token}
-        response = session.get(URL, params=params, stream=True)
+        response = session.get(URL, params={'id': file_id, 'confirm': token}, stream=True)
 
     with open(destination, "wb") as f:
         for chunk in response.iter_content(32768):
             if chunk:
                 f.write(chunk)
 
-# File setup
-file_id = "1g1JFvCauvlYcF35mqbonBiBYQxn-Kxd3"  # Replace this with your actual file ID
+# Use your actual file ID
+file_id = "1g1JFvCauvlYcF35mqbonBiBYQxn-Kxd3"
 filename = "similarity.pkl"
 
 if not os.path.exists(filename):
     st.write("Downloading similarity matrix...")
     download_file_from_google_drive(file_id, filename)
+    st.write("Download complete.")
 
-# Load the similarity matrix
-with open("similarity.pkl", "rb") as f:
-    similarity = pickle.load(f)
-
-st.title("Movie Recommender System")
-st.write("Similarity matrix loaded!")
-
+# Try to load the file
+try:
+    with open(filename, "rb") as f:
+        start = f.read(100)
+        if b'html' in start.lower():
+            st.error("Error: Google Drive returned an HTML file. Check if your file is publicly shared.")
+        else:
+            f.seek(0)
+            similarity = pickle.load(f)
+            st.success("Similarity matrix loaded successfully!")
+except Exception as e:
+    st.error(f"Failed to load similarity.pkl: {e}")
 
 # Your recommendation logic can go here...
 
