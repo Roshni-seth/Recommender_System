@@ -30,6 +30,10 @@ if not os.path.exists(filename):
     download_file_from_google_drive(file_id, filename)
     st.write("Download complete.")
 
+with open("similarity.pkl", "rb") as f:
+    header = f.read(200)
+    st.code(header)
+    
 # Try to load the file
 try:
     with open(filename, "rb") as f:
