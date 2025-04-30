@@ -3,49 +3,26 @@ import os
 import requests
 import pickle
 
-def download_file_from_google_drive(file_id, destination):
-    URL = "https://drive.google.com/uc?export=download"
-    session = requests.Session()
-
-    response = session.get(URL, params={'id': file_id}, stream=True)
-    token = None
-    for key, value in response.cookies.items():
-        if key.startswith('download_warning'):
-            token = value
-
-    if token:
-        response = session.get(URL, params={'id': file_id, 'confirm': token}, stream=True)
-
-    with open(destination, "wb") as f:
-        for chunk in response.iter_content(32768):
-            if chunk:
-                f.write(chunk)
-
-# Use your actual file ID
-file_id = "1g1JFvCauvlYcF35mqbonBiBYQxn-Kxd3"
+url = "https://huggingface.co/datasets/Roshni231123/similarity-data/resolve/main/similarity.pkl"
 filename = "similarity.pkl"
 
 if not os.path.exists(filename):
     st.write("Downloading similarity matrix...")
-    download_file_from_google_drive(file_id, filename)
-    st.write("Download complete.")
+    response = requests.get(url)
+    if response.status_code == 200:
+        with open(filename, "wb") as f:
+            f.write(response.content)
+        st.success("Downloaded similarity.pkl successfully!")
+    else:
+        st.error(f"Download failed. Status code: {response.status_code}")
 
-with open("similarity.pkl", "rb") as f:
-    header = f.read(200)
-    st.code(header)
-    
-# Try to load the file
 try:
     with open(filename, "rb") as f:
-        start = f.read(100)
-        if b'html' in start.lower():
-            st.error("Error: Google Drive returned an HTML file. Check if your file is publicly shared.")
-        else:
-            f.seek(0)
-            similarity = pickle.load(f)
-            st.success("Similarity matrix loaded successfully!")
+        similarity = pickle.load(f)
+    st.success("Loaded similarity matrix!")
 except Exception as e:
-    st.error(f"Failed to load similarity.pkl: {e}")
+    st.error(f"Error loading pickle file: {e}")
+
 
 # Your recommendation logic can go here...
 
